@@ -138,6 +138,7 @@ local function open(selection)
   end
 end
 
+-- Show bookmarks in telescope (open mode)
 M.OpenBookmark = function(opts)
   local lines = utils.get_lines_from_bookmark_file()
   if #lines == 0 then
@@ -148,7 +149,7 @@ M.OpenBookmark = function(opts)
   local n = {}
   for k, v in pairs(lines) do
     if vim.fn.filereadable(v) == 1 then
-      n[#n + 1] = utils.sub_home_path(v)
+      n[#n + 1] = utils.get_relative_path(v)
     elseif vim.fn.isdirectory(v) == 1 then
       local p = ""
       if (vim.fn.has("win32") == 0) then
@@ -159,19 +160,17 @@ M.OpenBookmark = function(opts)
       for f in p:lines() do
         local tmp = string.sub(f, #v + 1, #f)
         if not string.find(tmp, ".git") then
-          n[#n + 1] = utils.sub_home_path(f)
+          n[#n + 1] = utils.get_relative_path(f)
         end
       end
     end
   end
+
   opts = opts or {}
   pickers.new(opts, {
-    prompt_title = "Open a bookmark",
+    prompt_title = "Open bookmark",
     finder = finders.new_table {
       results = n
-    },
-    layout_config = {
-      preview_width = 0.5,
     },
     sorter = conf.file_sorter(opts),
     previewer = conf.file_previewer(opts),
@@ -188,10 +187,14 @@ end
 
 local function remove (lines)
   local selection = action_state.get_selected_entry()
+
   if selection ~= nil then
     local n = ""
+
     for k, v in pairs(lines) do
-      if v ~= selection[1] then
+      -- Get absolute path
+      v = utils.get_absolute_path(v)
+      if v ~= utils.get_absolute_path(selection[1]) then
         n = n .. v .. '\n'
       end
     end
@@ -202,6 +205,7 @@ local function remove (lines)
   end
 end
 
+-- Show bookmarks in telescope (remove mode)
 M.RemoveBookmark = function(opts)
   local lines = utils.get_lines_from_bookmark_file()
   if #lines == 0 then
@@ -209,21 +213,25 @@ M.RemoveBookmark = function(opts)
     return
   end
 
+  local entries = {}
+  for k, v in pairs(lines) do
+    if vim.fn.filereadable(v) == 1 then
+      entries[#entries + 1] = utils.get_relative_path(v)
+    end
+  end
+
   opts = opts or {}
   pickers.new(opts, {
-    prompt_title = "Remove a bookmark",
+    prompt_title = "Remove bookmark",
     finder = finders.new_table {
-      results = lines,
-    },
-    layout_config = {
-      preview_width = 0.5,
+      results = entries,
     },
     sorter = conf.file_sorter(opts),
     previewer = conf.file_previewer(opts),
     attach_mappings = function(prompt_bufnr, map)
       actions.select_default:replace(function()
         actions.close(prompt_bufnr)
-        remove(lines)
+        remove(entries)
       end)
       return true
     end,

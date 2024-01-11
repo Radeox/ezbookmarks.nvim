@@ -56,6 +56,32 @@ M.bookmark_exists = function (path)
   return 0
 end
 
+M.get_relative_path = function (path)
+  -- Get current working directory
+  local currentPwd = io.popen("pwd"):read("*l")
+
+  -- Check if the given path is within the current working directory
+  if string.sub(path, 1, #currentPwd) == currentPwd then
+    -- Extract the relative path
+    return string.sub(path, #currentPwd + 2) -- +2 to remove the leading '/'
+  else
+    -- Path is not within the current working directory
+    return path
+  end
+end
+
+M.get_absolute_path = function (path)
+  -- Check if the path is already absolute
+  if string.sub(path, 1, 1) == '/' then
+    return path
+  else
+    local currentPwd = io.popen("pwd"):read("*l") -- Get current working directory
+
+    -- Combine the current working directory with the relative path
+    return currentPwd .. '/' .. path
+  end
+end
+
 M.sub_home_path = function (file)
   if string.sub(file, 0, #home_path) == home_path then
     return "~" .. string.sub(file, #home_path + 1, #file)
